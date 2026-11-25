@@ -37,9 +37,16 @@ def main() -> int:
     os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
     with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
         f.write(ENTRY)
-    # Read back and re-validate, exactly as the gate would see it.
-    with open(OUTPUT_PATH, "r", encoding="utf-8") as f:
-        written = f.read()
+    # Read back the exact bytes on disk and re-validate them, exactly as
+    # the gate would see them. Binary mode: a stray BOM, newline, or
+    # re-encoding would change the bytes even if the text still decoded.
+    with open(OUTPUT_PATH, "rb") as f:
+        raw = f.read()
+    if raw != ENTRY.encode("utf-8"):
+        raise ValueError(f"entry.txt bytes on disk differ from ENTRY: {raw!r}")
+    if len(raw) != 4:
+        raise ValueError(f"entry.txt must be exactly 4 UTF-8 bytes, got {len(raw)}")
+    written = raw.decode("utf-8")  # strict UTF-8; raises on invalid bytes
     validate(written)
     print(f"wrote {OUTPUT_PATH}: {written!r} "
           f"({len(written)} character, {len(written.encode('utf-8'))} bytes)")
